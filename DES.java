@@ -109,7 +109,7 @@ public class DES
 	    }
 	};
 
-	//Expansion table
+	//Expansion table 32bits --> 48
 	private static final int[] E =
 	{
         32, 1, 2, 3, 4, 5,
@@ -142,6 +142,7 @@ public class DES
 	{
 		/////////////////////////////////////////////TEST INPUT
 
+		/*
 		int[] test = 
 		{
 			1,2,3,4,5,6,7,8,
@@ -153,14 +154,43 @@ public class DES
 			49,50,51,52,53,54,55,56,
 			57,58,59,60,61,62,63,64
 		};
+		*/
+
+		boolean[] test = 
+		{
+			false, false, false, false, false, false, false, true,
+			false, false, false, false, false, false, true, false,
+			false, false, false, false, false, false, true, true,
+			false, false, false, false, false, true, false, false,
+			false, false, false, false, false, true, false, true,
+			false, false, false, false, false, true, true, false,
+			false, false, false, false, false, true, true, true,
+			false, false, false, false, true, false, false, false
+		};
+
+		/*int[] test = {1,2,3,4,5,6,7,8};*/
+
+		boolean[] key =
+		{
+			false, false, false, false, false, false, false, true,
+			false, false, false, false, false, false, true, false,
+			false, false, false, false, false, false, true, true,
+			false, false, false, false, false, true, false, false,
+			false, false, false, false, false, true, false, true,
+			false, false, false, false, false, true, true, false,
+			false, false, false, false, false, true, true, true,
+			true, true, true, true, true, true, true, false
+		};
+
+		//test = permutation(test, IP, 64);
 
 		/////////////////////////////////////////////
 
-		//test = permutation(test, IP, 64); //Initial permuation
+		test = permutation(test, IP, 64); //Initial permutaion
 
-		System.out.println(test[0]);
+		test = switchFunction(test, keyGeneration(key));
 
-		switchFunction(test);
+		test = permutation(test, IPINVERSE, 64); //Inverse initial permutation
 
 	}
 
@@ -198,51 +228,17 @@ public class DES
     	return output;
 	}
 
-	private static boolean[][] keyGeneration(int[] key)
+	private static boolean[][] keyGeneration(boolean[] key)
 	{
-		key = permutation(key, PC1, 56);
+		//Takes 64bit key and converts to 56bit (removes parity bits)
+		boolean[] toSplit = new boolean[56];
+		toSplit = permutation(key, PC1, 56);
 
-		//Convert to binary array
-		boolean[][] converted = new boolean[56][8];
-
-		for(int i = 0; i < 56; i++)
-		{
-			converted[i] = toBinary(key[i]);
-		}
-
-		//split left
-		int j = 0;
-		int k = 1;
 		boolean[] left = new boolean[28];
 		boolean[] right = new boolean[28];
 
-		for(int i = 1; k < 29; i++)
-		{
-			left[k-1] = converted[j][i-1];
-
-			if(i % 8 == 0)
-			{
-				j++;
-				i = 0;
-			}
-
-			k++;
-		}
-
-		//split right
-		k = 1;
-		for(int i = 5; k < 29; i++)
-		{
-			right[k-1] = converted[j][i-1];
-
-			if(i % 8 == 0)
-			{
-				j++;
-				i = 0;
-			}
-
-			k++;
-		}
+		System.arraycopy(toSplit, 0, left, 0, left.length);
+		System.arraycopy(toSplit, 28, right, 0, right.length);
 
 		boolean[][] roundKeys = new boolean[16][48];
 
@@ -290,34 +286,166 @@ public class DES
 		return array;
 	}
 
-	private static void switchFunction(int[] input)
+	//Implements the switch function
+	private static boolean[] switchFunction(boolean[] input, boolean[][] roundKeys)
 	{
-		//Convert to binary array
-		boolean[][] text = new boolean[64][8];
+		//Split into two distinct arrays, left and right
+		boolean[] left = new boolean[32];
+		boolean[] right = new boolean[32];	
+		System.arraycopy(input, 0, left, 0, left.length);
+		System.arraycopy(input, 32, right, 0, right.length);
 
-		for(int i = 0; i < 64; i++)
+		boolean[] temp = new boolean[32];
+		boolean[] temp2 = new boolean[32];
+		boolean[] xorResults = new boolean[32];
+
+		//Repeat network 16 times
+		for(int x = 0; x < 16; x++)
 		{
-			text[i] = toBinary(input[i]);
+			temp = Fk(right, roundKeys[x]); //Pass key and right through Fk
+			temp2 = right;
+
+			for(int y = 0; y < 32; y++)
+			{
+				right[y] = left[y] ^ temp[y];
+			}
+
+			left = temp2;
+			right = xorResults;
 		}
 
-		System.out.println(Arrays.toString(text[0]));
+		//Combine left and right arrays
+		boolean[] combined = new boolean[64];
+		System.arraycopy(left, 0, combined, 0, left.length);
+		System.arraycopy(right, 0, combined, 32, right.length);
 
-		//Split into two distinct functions
-		
+		return combined;
 	}
 
-	private static int[] Fk(int[] in, int[] roundKey)
+	//Implements Fk function
+	private static boolean[] Fk(boolean[] in, boolean[] roundKey)
 	{
+		//Expansion permutation
+		in = permutation(in, E, 48);
 
+		boolean[] xorResults = new boolean[48];
 
-		return null;
+		//XOR
+		for(int i = 0; i < 48; i++)
+		{
+			xorResults[i] = in[i] ^ roundKey[i];
+		}
+
+		//Split into 8 groups of 6 bits
+		boolean[][] toBeSBox = new boolean[8][6];
+		int k = 1;
+		int j = 0;
+		for(int i = 1; k < 49; i++)
+		{
+			toBeSBox[j][i-1] = xorResults[k-1];
+
+			if(k % 6 == 0)
+			{
+				j++;
+				i = 0;
+			}
+
+			k++;
+		}
+
+		boolean[] output = new boolean[32];
+
+		int counter = 0;
+		for(int i = 0; i < 8; i++)
+		{
+			boolean[] temp = new boolean[4];
+			temp = sBox(toBeSBox[i], i);
+
+			for(int m = 0; j < 4; j++)
+			{
+				output[i] = temp[m];
+
+				counter++;
+			}
+		}
+
+		//Permutation P
+		output = permutation(output, P, 32);
+
+		return output;
 	}
 
-	private static int[] sBox()
+	//Implements SBOX
+	private static boolean[] sBox(boolean[] input, int box)
 	{
+		boolean[] output = new boolean[4];
 
+		//Calculate row
+		int i = calcRow(input);
 
-		return null;
+		//Calculat col
+		int j = calcCol(input);
+
+		//Get result
+		int result = getFromSBox(i, j, box);
+
+		//Convert result to binary
+		output = toBinary4Bits(result);
+
+		return output;
+	}
+
+	//Returns int from SBOX
+	private static int getFromSBox(int i, int j, int box)
+	{
+		System.out.println("i: " + i + ", j: " + j);
+		return SBOX[box][j + (i * 16)]; //I swapped I and J might casue probs later?
+	}
+
+	//Calculates the position in the sbox for replacement
+	private static int calcRow(boolean[] input)
+	{
+		int output = 0;
+
+		if(input[5] == true)
+		{
+			output = output + 1;
+		}
+
+		if(input[1] == true)
+		{
+			output = output + 2;
+		}
+
+		return output;
+	}
+
+	//Calculates the position in the sbox for replacement
+	private static int calcCol(boolean[] input)
+	{
+		int output = 0;
+
+		if(input[4] == true)
+		{
+			output = output + 1;
+		}
+
+		if(input[3] == true)
+		{
+			output = output + 2;
+		}
+
+		if(input[2] == true)
+		{
+			output = output + 4;
+		}
+
+		if(input[1] == true)
+		{
+			output = output + 8;
+		}
+
+		return output;
 	}
 
 	//Converts an int to binary, represented by a boolean array
@@ -327,6 +455,113 @@ public class DES
 		int divisor = 128;
 
 		for(int i = 0; i < 8; i++)
+		{
+			if(in == 0)
+			{
+				output[i] = false;
+			}
+			else if(in % divisor == in)
+			{
+				output[i] = false;
+			}
+			else
+			{
+				output[i] = true;
+				in = in - divisor;
+			}
+
+			divisor = divisor/2;
+		}
+
+		return output;
+	}
+
+	//Converts 8bits into an int
+	private static int toInt(boolean[] input)
+	{
+		int output = 0;
+
+		if(input[7] == true)
+		{
+			output = output + 128;
+		}
+
+		if(input[6] == true)
+		{
+			output = output + 64;
+		}
+
+		if(input[5] == true)
+		{
+			output = output + 32;
+		}
+
+		if(input[4] == true)
+		{
+			output = output + 16;
+		}
+
+		if(input[3] == true)
+		{
+			output = output + 8;
+		}
+
+		if(input[2] == true)
+		{
+			output = output + 4;
+		}
+
+		if(input[1] == true)
+		{
+			output = output + 2;
+		}
+
+		if(input[0] == true)
+		{
+			output = output + 1;
+		}
+
+		return output;
+	}
+
+	//Converts an array of ints to a binary array
+	private static boolean[] intsToBinaryArray(int[] in)
+	{
+		//Convert to binary array
+		boolean[][] binaryNumbers = new boolean[in.length][8];
+
+		for(int i = 0; i < 8; i++)
+		{
+			binaryNumbers[i] = toBinary(in[i]);
+		}
+
+		//Convert to one dimention
+		int j = 0;
+		int k = 1;
+		boolean[] output = new boolean[in.length];
+		for(int i = 1; k < in.length+1; i++)
+		{
+			output[k-1] = binaryNumbers[j][i-1];
+
+			if(i % 8 == 0)
+			{
+				j++;
+				i = 0;
+			}
+
+			k++;
+		}
+
+		return output;
+	}
+
+	//Converts an int to binary, represented by a boolean array
+	private static boolean[] toBinary4Bits(int in)
+	{
+		boolean[] output = new boolean[4];
+		int divisor = 8;
+
+		for(int i = 0; i < 4; i++)
 		{
 			if(in == 0)
 			{
