@@ -1,5 +1,7 @@
 import java.util.Arrays; //used for the toString method
 import java.lang.*;
+import java.io.*;
+import java.util.*;
 
 public class DES
 {
@@ -156,6 +158,7 @@ public class DES
 		};
 		*/
 
+		/*
 		boolean[] test = 
 		{
 			false, false, false, false, false, false, false, true,
@@ -168,7 +171,8 @@ public class DES
 			false, false, false, false, true, false, false, false
 		};
 
-		/*int[] test = {1,2,3,4,5,6,7,8};*/
+		int[] test = {1,2,3,4,5,6,7,8};
+		*/
 
 		boolean[] key =
 		{
@@ -186,12 +190,143 @@ public class DES
 
 		/////////////////////////////////////////////
 
+		/*
 		test = permutation(test, IP, 64); //Initial permutaion
 
 		test = switchFunction(test, keyGeneration(key));
 
-		test = permutation(test, IPINVERSE, 64); //Inverse initial permutation
+		test = permutation(test, IPINVERSE, 64); //Inverse initial permutation 
+		*/
 
+
+	}
+
+	//todo
+	private static LinkedList<Integer> encrypt(LinkedList<Integer> input, boolean[] key)
+	{
+		int count = 0;
+		int[] forEncryption = new int[8];
+		boolean[] temp = new boolean[64];
+		LinkedList<Integer> output = new LinkedList<Integer>();
+
+		while(input.size() != 0 || count < 8)
+		{
+			if(input.size() == 0)
+			{
+				//add padding
+				forEncryption[count] = 0;
+			}
+			else
+			{
+				//Add element for encryption
+				forEncryption[count] = input.removeFirst();
+			}
+
+			//Increment or reset count and encrypt
+			if(count == 7)
+			{
+				count = 0;
+
+				temp = switchFunction(intsToBinaryArray(forEncryption), keyGeneration(key));
+				/*
+				for(int i = 0;)
+				{
+
+					output.addLast()
+				}*/
+			}
+			else
+			{
+				count++;
+			}
+		}
+
+
+		return null;
+	}
+
+	private static LinkedList<Integer> readFile(String fName)
+	{
+		FileInputStream in = null;
+		LinkedList<Integer> output = new LinkedList<Integer>();
+
+		try 
+		{
+			in = new FileInputStream(fName);
+		
+			//read in characters
+			int c;
+			while ((c = in.read()) != -1)
+			{
+				//Add character to linked list
+				output.addLast(c);
+		 	}
+
+		 	//Close file stream
+		 	if (in != null)
+			{
+				in.close();
+			}
+		}
+		catch(IOException e)
+		{
+			//try and recover
+			try
+			{
+				if (in != null)
+			{
+				in.close();
+			}
+			}
+			catch(IOException e2)
+			{
+				//Nothing more can be done
+			}
+
+			System.out.println("Exception: " + e.getMessage());
+		}
+
+		return output;
+	}
+
+	private static void writeFile(String fName, LinkedList<Integer> list)
+	{
+		FileOutputStream out = null;
+
+		try 
+		{
+			out = new FileOutputStream(fName);
+		
+			//Write characters
+			while(list.size() != 0)
+			{
+				//Add character to linked list
+				out.write((char)((list.removeFirst()).intValue()));
+		 	}
+
+		 	//Close file stream
+		 	if (out != null)
+			{
+				out.close();
+			}
+		}
+		catch(IOException e)
+		{
+			//try and recover
+			try
+			{
+				if (out != null)
+			{
+				out.close();
+			}
+			}
+			catch(IOException e2)
+			{
+				//Nothing more can be done
+			}
+
+			System.out.println("Exception: " + e.getMessage());
+		}
 	}
 
 	//Function that implements bit permuations
@@ -310,6 +445,7 @@ public class DES
 				right[y] = left[y] ^ temp[y];
 			}
 
+			//Swap
 			left = temp2;
 			right = xorResults;
 		}
@@ -353,6 +489,7 @@ public class DES
 			k++;
 		}
 
+		//Pass through sboxs and combine
 		boolean[] output = new boolean[32];
 
 		int counter = 0;
@@ -553,6 +690,27 @@ public class DES
 		}
 
 		return output;
+	}
+
+	//todo
+	private static int[] binaryToIntsArray(boolean[] input)
+	{
+		int[] output = new int[8];
+		boolean[] temp = new boolean[8];
+
+		int count = 0;
+		for(int i = 0; i < 8; i++)
+		{
+			for(int j = 0; j < 8; j++)
+			{
+				temp[i*8 + j] = input[count];
+				count++;
+			}
+
+			output[i] = toInt(temp);
+		}
+
+		return null;
 	}
 
 	//Converts an int to binary, represented by a boolean array
