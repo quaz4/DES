@@ -201,13 +201,13 @@ public class DES
 
 	}
 
-	//todo
-	private static LinkedList<Integer> encrypt(LinkedList<Integer> input, boolean[] key)
+	private static LinkedList<Integer> encrypt(LinkedList<Integer> input, boolean[][] keys)
 	{
 		int count = 0;
 		int[] forEncryption = new int[8];
 		boolean[] temp = new boolean[64];
 		LinkedList<Integer> output = new LinkedList<Integer>();
+		boolean[] cipherText = new boolean[8];
 
 		while(input.size() != 0 || count < 8)
 		{
@@ -227,13 +227,24 @@ public class DES
 			{
 				count = 0;
 
-				temp = switchFunction(intsToBinaryArray(forEncryption), keyGeneration(key));
-				/*
-				for(int i = 0;)
-				{
+				temp = permutation(temp, IP, 64);
 
-					output.addLast()
-				}*/
+				temp = switchFunction(intsToBinaryArray(forEncryption), keys);
+
+				temp = permutation(temp, IPINVERSE, 64);
+
+				//Convert to int
+				int k = 0;
+				for(int i = 0; i < 8; i++)
+				{
+					for(k = 0; k < 8; k++)
+					{
+						cipherText[k] = temp[i * 8 + k];
+					}
+
+					//add to linked list as int
+					output.addLast(toInt(cipherText));
+				}
 			}
 			else
 			{
@@ -242,7 +253,22 @@ public class DES
 		}
 
 
-		return null;
+		return output;
+	}
+
+	//Makes a call to encrypt but passes in keys in reverse order
+	private static LinkedList<Integer> decrypt(LinkedList<Integer> input, boolean[][] keys)
+	{
+		for(int i = 0; i < keys.length / 2; i++)
+		{
+    		boolean[] temp = keys[i];
+    		keys[i] = keys[keys.length - i - 1];
+    		keys[keys.length - i - 1] = temp;
+		}
+
+		LinkedList<Integer> output = encrypt(input, keys);
+
+		return output;
 	}
 
 	private static LinkedList<Integer> readFile(String fName)
