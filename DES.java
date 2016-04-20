@@ -1,11 +1,15 @@
-import java.util.Arrays; //used for the toString method
+//Written by William Stewart 18349788
+//Implements DES in java
+//Uses arrays of boolean values to represent bits
+//Performs operations on those boolean values to represent operations of DES
+
+import java.util.Arrays;
 import java.lang.*;
 import java.io.*;
 import java.util.*;
 
 public class DES
 {
-	//DES uses many tables, declared here so they remain in memory
 	//Initial permutation table
     private static final int[] IP =
     { 
@@ -142,65 +146,143 @@ public class DES
 
 	public static void main(String[] args)
 	{
-		/////////////////////////////////////////////TEST INPUT
+		int action = 0;
+		String fIn;
+		String fOut;
+		String rawKey;
 
-		/*
-		int[] test = 
+		Scanner in = new Scanner(System.in);
+		Scanner inString = new Scanner(System.in);
+
+		//UI loop, loops while action != exit
+		while(action != 3)
 		{
-			1,2,3,4,5,6,7,8,
-			9,10,11,12,13,14,15,16,
-			17,18,19,20,21,22,23,24,
-			25,26,27,28,29,30,31,32,
-			33,34,35,36,37,38,39,40,
-			41,42,43,44,45,46,47,48,
-			49,50,51,52,53,54,55,56,
-			57,58,59,60,61,62,63,64
-		};
-		*/
+			System.out.println("1. Encrypt");
+			System.out.println("2. Decrypt");
+			System.out.println("3. Exit");
+			action = in.nextInt();
 
-		/*
-		boolean[] test = 
+			if(action == 1) //Encrypt
+			{
+				//Read in key
+				System.out.println("Encrypt");
+				System.out.print("Enter key: ");
+				rawKey = inString.nextLine();
+
+				//If key is valid continues
+				if(rawKey.length() != 0)
+				{
+					//Read in file name for read
+					System.out.print("Enter name of file to encrypt: ");
+					fIn = inString.nextLine();
+					
+					//Read in file name for write
+					System.out.print("Enter name of file to save encrypted text to: ");
+					fOut = inString.nextLine();
+
+					LinkedList<Integer> text = new LinkedList<Integer>();
+					boolean[][] keys = new boolean[16][28];
+
+					keys = keyGeneration(buildKey(rawKey)); //Build subkeys
+
+					text = readFile(fIn); //Read in file
+
+					text = encrypt(text, keys); //Pass subkeys and contents of file
+
+					writeFile(fOut, text); //Output ciphertext
+				}
+				else //Otherwise skips encrypt step
+				{
+					System.out.println("Invalid key entered");
+				}
+			}
+			else if(action == 2) //Decrypt
+			{
+				System.out.println("Decrypt");
+
+				System.out.print("Enter key: ");
+				rawKey = inString.nextLine();
+
+				//If key is valid continues
+				if(rawKey.length() != 0)
+				{
+					//Read in file name for read
+					System.out.print("Enter name of file to decrypt: ");
+					fIn = inString.nextLine();
+					
+					//Read in file name for write
+					System.out.print("Enter name of file to save decrypted text to: ");
+					fOut = inString.nextLine();
+
+					LinkedList<Integer> text = new LinkedList<Integer>();
+					boolean[][] keys = new boolean[16][28];
+
+					keys = keyGeneration(buildKey(rawKey)); //Build subkeys
+
+					text = readFile(fIn); //Read in file
+
+					text = decrypt(text, keys); //Pass subkeys and contents of file
+
+					writeFile(fOut, text); //Output plaintext
+				}
+				else //Otherwise skips decrypt step
+				{
+					System.out.println("Invalid key entered");
+				}
+			}
+			else if(action ==3) //Exit
+			{
+				System.out.println("Exiting...");
+			}
+			else //Invalid selection
+			{
+				System.out.println("Invalid selction, enter number range 1-3");
+			}
+		}
+	}
+
+	//Takes string and converts to valid key in binary
+	private static boolean[] buildKey(String input)
+	{
+		boolean[] output = new boolean[64];
+		boolean exit = false;
+
+		//Loop until key is at least 64bits (8 characters)
+		while(!exit)
 		{
-			false, false, false, false, false, false, false, true,
-			false, false, false, false, false, false, true, false,
-			false, false, false, false, false, false, true, true,
-			false, false, false, false, false, true, false, false,
-			false, false, false, false, false, true, false, true,
-			false, false, false, false, false, true, true, false,
-			false, false, false, false, false, true, true, true,
-			false, false, false, false, true, false, false, false
-		};
+			if(input.length() >= 8)
+			{
+				//Exits loop and converts string to binary
+				output = stringToBinary(input);
+				exit = true;
+			}
+			else
+			{
+				//Add key to key to increase size
+				input = input + input;
+			}
+		}
 
-		int[] test = {1,2,3,4,5,6,7,8};
-		*/
+		return output;
+	}
 
-		boolean[] key =
+	//Converts string to binary array, cuts anything past 64bits (8 characters)
+	private static boolean[] stringToBinary(String input)
+	{
+		int[] temp = new int[8];
+
+		//Convert to array of ints
+		for(int i = 0; i < 8; i++)
 		{
-			false, false, false, false, false, false, false, true,
-			false, false, false, false, false, false, true, false,
-			false, false, false, false, false, false, true, true,
-			false, false, false, false, false, true, false, false,
-			false, false, false, false, false, true, false, true,
-			false, false, false, false, false, true, true, false,
-			false, false, false, false, false, true, true, true,
-			true, true, true, true, true, true, true, false
-		};
+			temp[i] = (int)(input.charAt(i));
+		}
 
-		//test = permutation(test, IP, 64);
-
-		/////////////////////////////////////////////
-
-		/*
-		test = permutation(test, IP, 64); //Initial permutaion
-
-		test = switchFunction(test, keyGeneration(key));
-
-		test = permutation(test, IPINVERSE, 64); //Inverse initial permutation 
-		*/
-
+		//Convert ints to binary and return
+		return intsToBinaryArray(temp);
 
 	}
 
+	//Takes in subkeys and encrypts a Linked List of characters, returning the list
 	private static LinkedList<Integer> encrypt(LinkedList<Integer> input, boolean[][] keys)
 	{
 		int count = 0;
@@ -209,7 +291,7 @@ public class DES
 		LinkedList<Integer> output = new LinkedList<Integer>();
 		boolean[] cipherText = new boolean[8];
 
-		while(input.size() != 0 || count < 8)
+		while(input.size() != 0 || (count < 8 && count != 0))
 		{
 			if(input.size() == 0)
 			{
@@ -218,7 +300,7 @@ public class DES
 			}
 			else
 			{
-				//Add element for encryption
+				//Add to array for encryption
 				forEncryption[count] = input.removeFirst();
 			}
 
@@ -227,11 +309,16 @@ public class DES
 			{
 				count = 0;
 
+				//Convert to binary
+				temp = intsToBinaryArray(forEncryption);
+
+				//Initial Permutation
 				temp = permutation(temp, IP, 64);
 
-				temp = switchFunction(intsToBinaryArray(forEncryption), keys);
+				boolean[] next = switchFunction(temp, keys);
 
-				temp = permutation(temp, IPINVERSE, 64);
+				//Inverse Initial Permutation
+				next = permutation(next, IPINVERSE, 64);
 
 				//Convert to int
 				int k = 0;
@@ -239,10 +326,10 @@ public class DES
 				{
 					for(k = 0; k < 8; k++)
 					{
-						cipherText[k] = temp[i * 8 + k];
+						cipherText[k] = next[i * 8 + k];
 					}
 
-					//add to linked list as int
+					//Add to list for output and convert to int (autoboxed to Integer)
 					output.addLast(toInt(cipherText));
 				}
 			}
@@ -259,6 +346,7 @@ public class DES
 	//Makes a call to encrypt but passes in keys in reverse order
 	private static LinkedList<Integer> decrypt(LinkedList<Integer> input, boolean[][] keys)
 	{
+		//Flip keys around
 		for(int i = 0; i < keys.length / 2; i++)
 		{
     		boolean[] temp = keys[i];
@@ -266,19 +354,21 @@ public class DES
     		keys[keys.length - i - 1] = temp;
 		}
 
+		//"Encrypt" with reversed key sequence to get plaintext
 		LinkedList<Integer> output = encrypt(input, keys);
 
 		return output;
 	}
 
+	//Read in file and return linked list of characters
 	private static LinkedList<Integer> readFile(String fName)
 	{
-		FileInputStream in = null;
+		FileReader in = null;
 		LinkedList<Integer> output = new LinkedList<Integer>();
 
 		try 
 		{
-			in = new FileInputStream(fName);
+			in = new FileReader(fName);
 		
 			//read in characters
 			int c;
@@ -315,19 +405,22 @@ public class DES
 		return output;
 	}
 
+	//Takes a linked list of characters and writes to file
 	private static void writeFile(String fName, LinkedList<Integer> list)
 	{
-		FileOutputStream out = null;
+		FileWriter out = null;
+		//String output = null;
 
 		try 
 		{
-			out = new FileOutputStream(fName);
+			out = new FileWriter(fName);
 		
 			//Write characters
 			while(list.size() != 0)
 			{
-				//Add character to linked list
-				out.write((char)((list.removeFirst()).intValue()));
+				//Remove character from linked list
+				int ch = (list.removeFirst()).intValue();
+				out.write(ch);
 		 	}
 
 		 	//Close file stream
@@ -389,6 +482,7 @@ public class DES
     	return output;
 	}
 
+	//Takes in binary key and generates 16 subkeys
 	private static boolean[][] keyGeneration(boolean[] key)
 	{
 		//Takes 64bit key and converts to 56bit (removes parity bits)
@@ -398,22 +492,24 @@ public class DES
 		boolean[] left = new boolean[28];
 		boolean[] right = new boolean[28];
 
+		//Split into two arrays
 		System.arraycopy(toSplit, 0, left, 0, left.length);
 		System.arraycopy(toSplit, 28, right, 0, right.length);
 
 		boolean[][] roundKeys = new boolean[16][48];
 
+		//Shift and generate 16 times
 		for(int i = 0; i < 16; i++)
 		{
 			//shift left left
 			left = shiftLeft(left, keyShifts[i]);
 
 			//shift right left
-			right = shiftLeft(left, keyShifts[i]);
+			right = shiftLeft(right, keyShifts[i]);
 
-			//Combine arrays
 			boolean[] combined = new boolean[56];
 
+			//Combine arrays
 			System.arraycopy(left, 0, combined, 0, left.length);
 			System.arraycopy(right, 0, combined, 28, right.length);
 
@@ -427,20 +523,24 @@ public class DES
 		return roundKeys;
 	}
 
-	private static boolean[] shiftLeft(boolean[] array, int numShifts)
+	//Shift array around numShifts times
+	public static boolean[] shiftLeft(boolean[] array, int numShifts)
 	{
 		boolean temp;
 
+		//Loops numShifts times
 		for(int i = 0; i < numShifts; i++)
 		{
+			//Store first value
 			temp = array[0];
 
+			//Shuffle down
 			for(int k = 0; k < array.length-1; k++)
 			{
-				System.out.println("array[" + k + "] = " + array[k]);
 				array[k] = array[k+1];
 			}
 
+			//Place on end of array
 			array[array.length-1] = temp;
 		}
 
@@ -450,29 +550,31 @@ public class DES
 	//Implements the switch function
 	private static boolean[] switchFunction(boolean[] input, boolean[][] roundKeys)
 	{
-		//Split into two distinct arrays, left and right
 		boolean[] left = new boolean[32];
 		boolean[] right = new boolean[32];	
-		System.arraycopy(input, 0, left, 0, left.length);
-		System.arraycopy(input, 32, right, 0, right.length);
 
+		//Splits into two arrays
+		System.arraycopy(input, 0, left, 0, 32);
+		System.arraycopy(input, 32, right, 0, 32);
+
+		boolean[] fkResult = new boolean[32];
 		boolean[] temp = new boolean[32];
-		boolean[] temp2 = new boolean[32];
 		boolean[] xorResults = new boolean[32];
 
 		//Repeat network 16 times
 		for(int x = 0; x < 16; x++)
 		{
-			temp = Fk(right, roundKeys[x]); //Pass key and right through Fk
-			temp2 = right;
+			System.arraycopy(right, 0, temp, 0, 32);
+			fkResult = Fk(right, roundKeys[x]); //Pass key and right through Fk
 
+			//XOR left with result of f
 			for(int y = 0; y < 32; y++)
 			{
-				right[y] = left[y] ^ temp[y];
+				xorResults[y] = left[y] ^ fkResult[y];
 			}
 
 			//Swap
-			left = temp2;
+			left = temp;
 			right = xorResults;
 		}
 
@@ -492,7 +594,7 @@ public class DES
 
 		boolean[] xorResults = new boolean[48];
 
-		//XOR
+		//XOR input with key
 		for(int i = 0; i < 48; i++)
 		{
 			xorResults[i] = in[i] ^ roundKey[i];
@@ -524,7 +626,7 @@ public class DES
 			boolean[] temp = new boolean[4];
 			temp = sBox(toBeSBox[i], i);
 
-			for(int m = 0; j < 4; j++)
+			for(int m = 0; m < 4; m++)
 			{
 				output[i] = temp[m];
 
@@ -561,12 +663,11 @@ public class DES
 	//Returns int from SBOX
 	private static int getFromSBox(int i, int j, int box)
 	{
-		System.out.println("i: " + i + ", j: " + j);
-		return SBOX[box][j + (i * 16)]; //I swapped I and J might casue probs later?
+		return SBOX[box][j + (i * 16)];
 	}
 
 	//Calculates the position in the sbox for replacement
-	private static int calcRow(boolean[] input)
+	public static int calcRow(boolean[] input)
 	{
 		int output = 0;
 
@@ -575,7 +676,7 @@ public class DES
 			output = output + 1;
 		}
 
-		if(input[1] == true)
+		if(input[0] == true)
 		{
 			output = output + 2;
 		}
@@ -584,12 +685,12 @@ public class DES
 	}
 
 	//Calculates the position in the sbox for replacement
-	private static int calcCol(boolean[] input)
+	public static int calcCol(boolean[] input)
 	{
 		int output = 0;
 
 		if(input[4] == true)
-		{
+		{  	
 			output = output + 1;
 		}
 
@@ -612,13 +713,14 @@ public class DES
 	}
 
 	//Converts an int to binary, represented by a boolean array
-	private static boolean[] toBinary(int in)
+	public static boolean[] toBinary(int in)
 	{
 		boolean[] output = new boolean[8];
 		int divisor = 128;
 
 		for(int i = 0; i < 8; i++)
 		{
+			//Padd to 8 bits
 			if(in == 0)
 			{
 				output[i] = false;
@@ -640,46 +742,46 @@ public class DES
 	}
 
 	//Converts 8bits into an int
-	private static int toInt(boolean[] input)
+	public static int toInt(boolean[] input)
 	{
 		int output = 0;
 
-		if(input[7] == true)
+		if(input[0] == true)
 		{
 			output = output + 128;
 		}
 
-		if(input[6] == true)
+		if(input[1] == true)
 		{
 			output = output + 64;
 		}
 
-		if(input[5] == true)
+		if(input[2] == true)
 		{
 			output = output + 32;
 		}
 
-		if(input[4] == true)
+		if(input[3] == true)
 		{
 			output = output + 16;
 		}
 
-		if(input[3] == true)
+		if(input[4] == true)
 		{
 			output = output + 8;
 		}
 
-		if(input[2] == true)
+		if(input[5] == true)
 		{
 			output = output + 4;
 		}
 
-		if(input[1] == true)
+		if(input[6] == true)
 		{
 			output = output + 2;
 		}
 
-		if(input[0] == true)
+		if(input[7] == true)
 		{
 			output = output + 1;
 		}
@@ -688,21 +790,21 @@ public class DES
 	}
 
 	//Converts an array of ints to a binary array
-	private static boolean[] intsToBinaryArray(int[] in)
+	public static boolean[] intsToBinaryArray(int[] in)
 	{
 		//Convert to binary array
 		boolean[][] binaryNumbers = new boolean[in.length][8];
 
 		for(int i = 0; i < 8; i++)
 		{
-			binaryNumbers[i] = toBinary(in[i]);
+			binaryNumbers[i] = toBinary(in[i]);	
 		}
 
-		//Convert to one dimention
+		//Convert to one dimension
 		int j = 0;
 		int k = 1;
-		boolean[] output = new boolean[in.length];
-		for(int i = 1; k < in.length+1; i++)
+		boolean[] output = new boolean[64];
+		for(int i = 1; j < in.length; i++)
 		{
 			output[k-1] = binaryNumbers[j][i-1];
 
@@ -718,25 +820,19 @@ public class DES
 		return output;
 	}
 
-	//todo
+	//Converts 64bits of binary to array 8 ints
 	private static int[] binaryToIntsArray(boolean[] input)
 	{
 		int[] output = new int[8];
 		boolean[] temp = new boolean[8];
 
-		int count = 0;
 		for(int i = 0; i < 8; i++)
 		{
-			for(int j = 0; j < 8; j++)
-			{
-				temp[i*8 + j] = input[count];
-				count++;
-			}
-
+			System.arraycopy(input, i*8, temp, 0, 8);
 			output[i] = toInt(temp);
 		}
 
-		return null;
+		return output;
 	}
 
 	//Converts an int to binary, represented by a boolean array
